@@ -1048,7 +1048,7 @@
             }
         }
 
-        // MODIFIED: Navigation (added auth prompt for My GPTs)
+        // FIXED: Navigation function (this was the problem!)
         function showSection(sectionId) {
             if (sectionId === 'my-gpts' && !currentUser) {
                 showAuthModal();
@@ -1064,7 +1064,14 @@
             });
             
             document.getElementById(sectionId).classList.add('active');
-            event.target.classList.add('active');
+            
+            // FIXED: Only access event.target if event exists
+            if (typeof event !== 'undefined' && event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Find the correct nav item and make it active
+                document.querySelector(`[onclick*="'${sectionId}'"]`)?.classList.add('active');
+            }
 
             if (sectionId === 'my-gpts') {
                 loadGPTs();
