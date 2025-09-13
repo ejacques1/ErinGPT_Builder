@@ -6,6 +6,8 @@
     <title>ErinGPT Builder</title>
     <!-- ADDED: Supabase for auth -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- ADDED: Markdown parser for formatting chat messages -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -453,6 +455,75 @@
         .message.assistant {
             background: white;
             border: 1px solid #e9ecef;
+        }
+
+        /* ADDED: Markdown formatting styles for assistant messages */
+        .message.assistant h1,
+        .message.assistant h2,
+        .message.assistant h3,
+        .message.assistant h4,
+        .message.assistant h5,
+        .message.assistant h6 {
+            margin: 15px 0 8px 0;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .message.assistant h1 { font-size: 1.6em; }
+        .message.assistant h2 { font-size: 1.4em; }
+        .message.assistant h3 { font-size: 1.2em; }
+        .message.assistant h4 { font-size: 1.1em; }
+        .message.assistant h5 { font-size: 1em; }
+        .message.assistant h6 { font-size: 0.9em; }
+
+        .message.assistant ul,
+        .message.assistant ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .message.assistant li {
+            margin: 5px 0;
+            line-height: 1.4;
+        }
+
+        .message.assistant p {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .message.assistant strong {
+            font-weight: 600;
+            color: #2196F3;
+        }
+
+        .message.assistant em {
+            font-style: italic;
+            color: #666;
+        }
+
+        .message.assistant code {
+            background: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .message.assistant pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message.assistant blockquote {
+            border-left: 3px solid #2196F3;
+            padding-left: 10px;
+            margin: 10px 0;
+            color: #666;
+            font-style: italic;
         }
 
         .gpt-list {
@@ -1343,6 +1414,7 @@
             }
         }
 
+        // UPDATED: Enhanced addMessageToChat function with markdown support
         function addMessageToChat(message, sender) {
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
@@ -1350,7 +1422,23 @@
             
             messageDiv.id = messageId;
             messageDiv.className = `message ${sender}`;
-            messageDiv.textContent = message;
+            
+            // ADDED: Render markdown for assistant messages
+            if (sender === 'assistant' && typeof marked !== 'undefined') {
+                // Configure marked options for better formatting
+                marked.setOptions({
+                    breaks: true,        // Convert \n to <br>
+                    gfm: true,          // GitHub flavored markdown
+                    headerIds: false,   // Don't add IDs to headers
+                    mangle: false       // Don't mangle email addresses
+                });
+                
+                // Render markdown to HTML
+                messageDiv.innerHTML = marked.parse(message);
+            } else {
+                // For user messages or if marked isn't available, use plain text
+                messageDiv.textContent = message;
+            }
             
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
