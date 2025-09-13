@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ErinGPT Builder</title>
+    <!-- ADDED: Supabase for auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -32,6 +34,7 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
@@ -42,6 +45,203 @@
         .header p {
             font-size: 1.2em;
             opacity: 0.9;
+        }
+
+        /* ADDED: Auth button styles */
+        .header-auth-buttons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-signin {
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #2196F3;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .header-signin:hover {
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        .header-signup {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .header-signup:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* ADDED: Auth modal styles */
+        .auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .auth-form {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            width: 400px;
+            max-width: 90vw;
+            text-align: center;
+            position: relative;
+        }
+
+        .auth-form h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .auth-form .subtitle {
+            margin-bottom: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .google-btn {
+            width: 100%;
+            background: #4285f4;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .google-btn:hover {
+            background: #3367d6;
+        }
+
+        .divider {
+            margin: 20px 0;
+            text-align: center;
+            color: #666;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 15px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: #666;
+        }
+
+        .auth-tab.active {
+            border-bottom-color: #2196F3;
+            color: #2196F3;
+        }
+
+        .signin-prompt {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .signin-prompt button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
         }
 
         .main-content {
@@ -327,8 +527,68 @@
     </style>
 </head>
 <body>
+    <!-- ADDED: Auth Modal -->
+    <div id="authModal" class="auth-modal">
+        <div class="auth-form">
+            <button class="close-modal" onclick="closeAuthModal()">&times;</button>
+            <h2>Save Your GPT</h2>
+            <p class="subtitle">Sign in to save your GPT to the cloud and access from any device</p>
+            
+            <button class="google-btn" onclick="signInWithGoogle()">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                    <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+            </button>
+            
+            <div class="divider"><span>or</span></div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchAuthTab('login')">Login</div>
+                <div class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</div>
+            </div>
+            
+            <div id="loginForm">
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="Enter your email" style="text-align: left;">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Enter your password" style="text-align: left;">
+                </div>
+                <button class="btn" onclick="handleLogin()" style="width: 100%;">Login</button>
+            </div>
+
+            <div id="signupForm" style="display: none;">
+                <div class="form-group">
+                    <input type="email" id="signupEmail" placeholder="Enter your email" style="text-align: left;">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="signupPassword" placeholder="Choose a password" style="text-align: left;">
+                </div>
+                <button class="btn" onclick="handleSignup()" style="width: 100%;">Sign Up</button>
+            </div>
+
+            <div id="authError" class="alert alert-error" style="display: none; margin-top: 20px;"></div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
+            <!-- ADDED: Sign In & Sign Up buttons -->
+            <div class="header-auth-buttons" id="headerAuthButtons">
+                <button class="header-signin" onclick="showAuthModal('login')">Sign In</button>
+                <button class="header-signup" onclick="showAuthModal('signup')">Sign Up</button>
+            </div>
+            
+            <!-- ADDED: User info (hidden by default) -->
+            <div class="user-info" id="userInfo">
+                <span id="userEmail"></span>
+                <button class="logout-btn" onclick="handleLogout()">Logout</button>
+            </div>
+
             <h1>ErinGPT Builder</h1>
             <p>Create powerful custom AI assistants with document analysis and web search</p>
         </div>
@@ -353,7 +613,7 @@
                             <li>Upload training documents (.txt files)</li>
                             <li>Custom instructions and personality</li>
                             <li>Document analysis during chat</li>
-                            <li>Save unlimited GPTs locally</li>
+                            <li>Save unlimited GPTs (requires account)</li>
                             <li>No API key required - completely free!</li>
                         </ul>
                     </div>
@@ -437,22 +697,151 @@
     </div>
 
     <script>
-        // Global variables
+        // ADDED: Supabase config (replace with your credentials)
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+        
+        let supabase = null;
+        let currentUser = null;
+        
+        if (SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    currentUser = session.user;
+                    showUserInfo();
+                    loadGPTs();
+                }
+            });
+        }
+
+        // Global variables (your original ones)
         let currentGPT = null;
         let uploadedFiles = [];
         
-        // Initialize app
+        // MODIFIED: Initialize app
         document.addEventListener('DOMContentLoaded', function() {
+            hideUserInfo(); // ADDED: Show auth buttons by default
             loadGPTs();
             setupFileUpload();
         });
 
-        // Model Management  
+        // ADDED: Auth functions
+        function showAuthModal(defaultTab = 'login') {
+            document.getElementById('authModal').style.display = 'flex';
+            switchAuthTab(defaultTab);
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').style.display = 'none';
+        }
+
+        function showUserInfo() {
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('headerAuthButtons').style.display = 'none';
+            document.getElementById('userEmail').textContent = currentUser.email;
+        }
+
+        function hideUserInfo() {
+            document.getElementById('userInfo').style.display = 'none';
+            document.getElementById('headerAuthButtons').style.display = 'flex';
+        }
+
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[onclick="switchAuthTab('${tab}')"]`).classList.add('active');
+            
+            if (tab === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('signupForm').style.display = 'none';
+            } else {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'block';
+            }
+        }
+
+        async function signInWithGoogle() {
+            if (!supabase) {
+                alert('Please configure Supabase credentials first');
+                return;
+            }
+            
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: window.location.origin }
+            });
+            
+            if (error) showAuthError(error.message);
+        }
+
+        async function handleLogin() {
+            if (!supabase) {
+                alert('Please configure Supabase credentials first');
+                return;
+            }
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showAuthError('Please enter both email and password');
+                return;
+            }
+            
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                showAuthError(error.message);
+            } else {
+                currentUser = data.user;
+                showUserInfo();
+                closeAuthModal();
+                loadGPTs();
+                if (document.getElementById('gptName').value) createGPT();
+            }
+        }
+
+        async function handleSignup() {
+            if (!supabase) {
+                alert('Please configure Supabase credentials first');
+                return;
+            }
+            
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            
+            if (!email || !password) {
+                showAuthError('Please enter both email and password');
+                return;
+            }
+            
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                showAuthError(error.message);
+            } else {
+                alert('Check your email for confirmation link!');
+            }
+        }
+
+        async function handleLogout() {
+            if (supabase) await supabase.auth.signOut();
+            currentUser = null;
+            hideUserInfo();
+            loadGPTs();
+        }
+
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        // Model Management (unchanged)
         function getSelectedModel() {
             return document.getElementById('defaultModel')?.value || 'openai/gpt-4o-mini';
         }
 
-        // File Upload
+        // File Upload (unchanged)
         function setupFileUpload() {
             const fileUpload = document.getElementById('fileUpload');
             
@@ -509,8 +898,8 @@
             updateFileList();
         }
 
-        // GPT Creation
-        function createGPT() {
+        // MODIFIED: GPT Creation (added auth prompt)
+        async function createGPT() {
             const name = document.getElementById('gptName').value;
             const description = document.getElementById('gptDescription').value;
             const instructions = document.getElementById('gptInstructions').value;
@@ -518,6 +907,12 @@
 
             if (!name || !instructions) {
                 alert('Please fill in the name and instructions');
+                return;
+            }
+
+            // ADDED: Show auth modal if not logged in
+            if (!currentUser) {
+                showAuthModal();
                 return;
             }
 
@@ -531,12 +926,24 @@
                 created: new Date().toISOString()
             };
 
-            // Save to localStorage
-            const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
-            gpts.push(gpt);
-            localStorage.setItem('eringpt_gpts', JSON.stringify(gpts));
+            // ADDED: Save to Supabase if logged in
+            if (supabase && currentUser) {
+                const { error } = await supabase
+                    .from('user_gpts')
+                    .insert({ user_id: currentUser.id, gpt_data: gpt });
 
-            // Clear form
+                if (error) {
+                    alert('Error saving GPT: ' + error.message);
+                    return;
+                }
+            } else {
+                // Fallback to localStorage if Supabase not configured
+                const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
+                gpts.push(gpt);
+                localStorage.setItem('eringpt_gpts', JSON.stringify(gpts));
+            }
+
+            // Clear form (unchanged)
             document.getElementById('gptName').value = '';
             document.getElementById('gptDescription').value = '';
             document.getElementById('gptInstructions').value = '';
@@ -548,30 +955,90 @@
             showSection('my-gpts');
         }
 
-        // Load and display GPTs
-        function loadGPTs() {
-            const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
+        // MODIFIED: Load and display GPTs (added sign-in prompt)
+        async function loadGPTs() {
             const gptList = document.getElementById('gptList');
             
-            if (gpts.length === 0) {
-                gptList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No GPTs created yet. Create your first one!</p>';
+            if (!currentUser) {
+                gptList.innerHTML = `
+                    <div class="signin-prompt">
+                        <h3>Sign in to save and access your GPTs</h3>
+                        <p>Create GPTs instantly, but sign in to save them permanently and access from any device.</p>
+                        <button onclick="showAuthModal()">Sign In</button>
+                    </div>
+                `;
                 return;
             }
 
-            gptList.innerHTML = gpts.map(gpt => `
-                <div class="gpt-item" onclick="selectGPT('${gpt.id}')">
-                    <h3>${gpt.name}</h3>
-                    <p>${gpt.description}</p>
-                    <div style="font-size: 12px; color: #999; margin-top: 5px;">
-                        ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+            if (supabase) {
+                const { data: gpts, error } = await supabase
+                    .from('user_gpts')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Error loading GPTs:', error);
+                    return;
+                }
+
+                if (!gpts || gpts.length === 0) {
+                    gptList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No GPTs created yet. Create your first one!</p>';
+                    return;
+                }
+
+                gptList.innerHTML = gpts.map(row => {
+                    const gpt = row.gpt_data;
+                    return `
+                        <div class="gpt-item" onclick="selectGPT('${row.id}')">
+                            <h3>${gpt.name}</h3>
+                            <p>${gpt.description}</p>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                // Fallback to localStorage
+                const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
+                if (gpts.length === 0) {
+                    gptList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No GPTs created yet. Create your first one!</p>';
+                    return;
+                }
+
+                gptList.innerHTML = gpts.map(gpt => `
+                    <div class="gpt-item" onclick="selectGPT('${gpt.id}')">
+                        <h3>${gpt.name}</h3>
+                        <p>${gpt.description}</p>
+                        <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                            ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
 
-        function selectGPT(gptId) {
-            const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
-            currentGPT = gpts.find(gpt => gpt.id === gptId);
+        async function selectGPT(gptId) {
+            if (supabase && currentUser) {
+                const { data, error } = await supabase
+                    .from('user_gpts')
+                    .select('*')
+                    .eq('id', gptId)
+                    .eq('user_id', currentUser.id)
+                    .single();
+
+                if (error) {
+                    console.error('Error loading GPT:', error);
+                    return;
+                }
+
+                currentGPT = data.gpt_data;
+            } else {
+                // Fallback to localStorage
+                const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
+                currentGPT = gpts.find(gpt => gpt.id === gptId);
+            }
             
             if (currentGPT) {
                 document.getElementById('chatTitle').textContent = currentGPT.name;
@@ -581,26 +1048,30 @@
             }
         }
 
-        // Navigation
+        // MODIFIED: Navigation (added auth prompt for My GPTs)
         function showSection(sectionId) {
-            // Hide all sections
+            if (sectionId === 'my-gpts' && !currentUser) {
+                showAuthModal();
+                return;
+            }
+
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
             
-            // Remove active class from nav items
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
             
-            // Show selected section
             document.getElementById(sectionId).classList.add('active');
-            
-            // Add active class to clicked nav item
             event.target.classList.add('active');
+
+            if (sectionId === 'my-gpts') {
+                loadGPTs();
+            }
         }
 
-        // Chat functionality
+        // Chat functionality (unchanged)
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
                 sendMessage();
@@ -613,18 +1084,14 @@
             
             if (!message || !currentGPT) return;
 
-            // Add user message to chat
             addMessageToChat(message, 'user');
             input.value = '';
 
-            // Show loading
             const loadingId = addMessageToChat('Thinking...', 'assistant');
 
             try {
-                // Prepare context from uploaded files
                 let context = '';
                 if (currentGPT.files.length > 0) {
-                    // Simple keyword search through files
                     const keywords = message.toLowerCase().split(' ');
                     const relevantContent = [];
                     
@@ -642,7 +1109,6 @@
                     }
                 }
 
-                // Call your secure API instead of OpenRouter directly
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
@@ -658,7 +1124,6 @@
 
                 const data = await response.json();
                 
-                // Remove loading message
                 document.getElementById(loadingId).remove();
 
                 if (data.success) {
@@ -668,7 +1133,6 @@
                 }
 
             } catch (error) {
-                // Remove loading message
                 document.getElementById(loadingId).remove();
                 addMessageToChat('Error: ' + error.message, 'assistant');
             }
