@@ -1102,6 +1102,7 @@
             }
         }
 
+        // FIXED: Updated sendMessage function - remove broken document search
         async function sendMessage() {
             const input = document.getElementById('chatInput');
             const message = input.value.trim();
@@ -1114,24 +1115,13 @@
             const loadingId = addMessageToChat('Thinking...', 'assistant');
 
             try {
+                // FIXED: Remove broken document search - let GPT respond intelligently using instructions
                 let context = '';
-                if (currentGPT.files.length > 0) {
-                    const keywords = message.toLowerCase().split(' ');
-                    const relevantContent = [];
-                    
-                    currentGPT.files.forEach(file => {
-                        const lines = file.content.split('\n');
-                        lines.forEach(line => {
-                            if (keywords.some(keyword => line.toLowerCase().includes(keyword))) {
-                                relevantContent.push(line.trim());
-                            }
-                        });
-                    });
-                    
-                    if (relevantContent.length > 0) {
-                        context = relevantContent.slice(0, 10).join('\n');
-                    }
-                }
+                
+                // OPTIONAL: If you want to include ALL document content (uncomment these lines):
+                // if (currentGPT.files.length > 0) {
+                //     context = currentGPT.files.map(file => `File: ${file.name}\n${file.content}`).join('\n\n');
+                // }
 
                 const response = await fetch('/api/chat', {
                     method: 'POST',
