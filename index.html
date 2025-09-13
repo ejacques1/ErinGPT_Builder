@@ -1377,13 +1377,13 @@
             const loadingId = addMessageToChat('Thinking...', 'assistant');
 
             try {
-                // FIXED: Remove broken document search - let GPT respond intelligently using instructions
+                // ENABLED: Include ALL document content as context
                 let context = '';
                 
-                // OPTIONAL: If you want to include ALL document content (uncomment these lines):
-                // if (currentGPT.files.length > 0) {
-                //     context = currentGPT.files.map(file => `File: ${file.name}\n${file.content}`).join('\n\n');
-                // }
+                // Send all uploaded document content to the GPT
+                if (currentGPT.files.length > 0) {
+                    context = currentGPT.files.map(file => `File: ${file.name}\n${file.content}`).join('\n\n');
+                }
 
                 const response = await fetch('/api/chat', {
                     method: 'POST',
