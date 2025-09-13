@@ -375,6 +375,27 @@
             transform: none;
         }
 
+        /* ADDED: Styles for edit/delete buttons */
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+        }
+
+        .btn-delete:hover {
+            box-shadow: 0 10px 20px rgba(220, 53, 69, 0.3);
+        }
+
+        .gpt-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-start;
+        }
+
         .chat-container {
             height: 500px;
             display: flex;
@@ -444,7 +465,6 @@
             border: 1px solid #e9ecef;
             border-radius: 10px;
             margin-bottom: 10px;
-            cursor: pointer;
             transition: all 0.3s ease;
         }
 
@@ -461,6 +481,10 @@
         .gpt-item p {
             color: #666;
             font-size: 14px;
+        }
+
+        .gpt-content {
+            cursor: pointer;
         }
 
         .alert {
@@ -635,7 +659,7 @@
 
                 <!-- Create GPT Section -->
                 <div id="create" class="section">
-                    <h2>Create New GPT</h2>
+                    <h2 id="createTitle">Create New GPT</h2>
                     
                     <div class="form-group">
                         <label for="gptName">GPT Name</label>
@@ -668,7 +692,7 @@
                         </label>
                     </div>
 
-                    <button class="btn" onclick="createGPT()">Create GPT</button>
+                    <button class="btn" id="createButton" onclick="createGPT()">Create GPT</button>
                 </div>
 
                 <!-- My GPTs Section -->
@@ -732,9 +756,10 @@
     });
 }
 
-        // Global variables (your original ones)
+        // Global variables
         let currentGPT = null;
         let uploadedFiles = [];
+        let editingGPTId = null; // ADDED: Track editing state
         
         // MODIFIED: Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -915,8 +940,10 @@
             updateFileList();
         }
 
-        // MODIFIED: GPT Creation (added auth prompt)
+        // MODIFIED: GPT Creation (added editing state reset)
         async function createGPT() {
+            editingGPTId = null; // Reset editing state
+            
             const name = document.getElementById('gptName').value;
             const description = document.getElementById('gptDescription').value;
             const instructions = document.getElementById('gptInstructions').value;
@@ -961,18 +988,23 @@
             }
 
             // Clear form (unchanged)
-            document.getElementById('gptName').value = '';
-            document.getElementById('gptDescription').value = '';
-            document.getElementById('gptInstructions').value = '';
-            uploadedFiles = [];
-            updateFileList();
+            clearForm();
 
             alert('GPT created successfully!');
             loadGPTs();
             showSection('my-gpts');
         }
 
-        // MODIFIED: Load and display GPTs (added sign-in prompt)
+        // ADDED: Helper function to clear form
+        function clearForm() {
+            document.getElementById('gptName').value = '';
+            document.getElementById('gptDescription').value = '';
+            document.getElementById('gptInstructions').value = '';
+            uploadedFiles = [];
+            updateFileList();
+        }
+
+        // MODIFIED: Load and display GPTs with edit/delete buttons
         async function loadGPTs() {
             const gptList = document.getElementById('gptList');
             
@@ -1007,11 +1039,17 @@
                 gptList.innerHTML = gpts.map(row => {
                     const gpt = row.gpt_data;
                     return `
-                        <div class="gpt-item" onclick="selectGPT('${row.id}')">
-                            <h3>${gpt.name}</h3>
-                            <p>${gpt.description}</p>
-                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
-                                ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                        <div class="gpt-item">
+                            <div class="gpt-content" onclick="selectGPT('${row.id}')">
+                                <h3>${gpt.name}</h3>
+                                <p>${gpt.description}</p>
+                                <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                    ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                                </div>
+                            </div>
+                            <div class="gpt-actions">
+                                <button class="btn btn-small" onclick="editGPT('${row.id}')" style="event.stopPropagation()">Edit</button>
+                                <button class="btn btn-small btn-delete" onclick="deleteGPT('${row.id}')" style="event.stopPropagation()">Delete</button>
                             </div>
                         </div>
                     `;
@@ -1025,15 +1063,163 @@
                 }
 
                 gptList.innerHTML = gpts.map(gpt => `
-                    <div class="gpt-item" onclick="selectGPT('${gpt.id}')">
-                        <h3>${gpt.name}</h3>
-                        <p>${gpt.description}</p>
-                        <div style="font-size: 12px; color: #999; margin-top: 5px;">
-                            ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                    <div class="gpt-item">
+                        <div class="gpt-content" onclick="selectGPT('${gpt.id}')">
+                            <h3>${gpt.name}</h3>
+                            <p>${gpt.description}</p>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                            </div>
+                        </div>
+                        <div class="gpt-actions">
+                            <button class="btn btn-small" onclick="editGPT('${gpt.id}')">Edit</button>
+                            <button class="btn btn-small btn-delete" onclick="deleteGPT('${gpt.id}')">Delete</button>
                         </div>
                     </div>
                 `).join('');
             }
+        }
+
+        // ADDED: Edit GPT function
+        async function editGPT(gptId) {
+            event.stopPropagation(); // Prevent triggering selectGPT
+            
+            let gptToEdit = null;
+            
+            if (supabase && currentUser) {
+                const { data, error } = await supabase
+                    .from('user_gpts')
+                    .select('*')
+                    .eq('id', gptId)
+                    .eq('user_id', currentUser.id)
+                    .single();
+
+                if (error) {
+                    console.error('Error loading GPT:', error);
+                    return;
+                }
+                gptToEdit = data.gpt_data;
+                editingGPTId = gptId; // Store the database ID
+            } else {
+                // Fallback to localStorage
+                const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
+                gptToEdit = gpts.find(gpt => gpt.id === gptId);
+                editingGPTId = gptId; // Store the GPT ID
+            }
+
+            if (!gptToEdit) {
+                alert('GPT not found');
+                return;
+            }
+
+            // Pre-populate the form
+            document.getElementById('gptName').value = gptToEdit.name;
+            document.getElementById('gptDescription').value = gptToEdit.description;
+            document.getElementById('gptInstructions').value = gptToEdit.instructions;
+            document.getElementById('enableWebSearch').checked = gptToEdit.webSearch;
+            
+            // Set uploaded files
+            uploadedFiles = [...gptToEdit.files];
+            updateFileList();
+
+            // Change the UI to edit mode
+            document.getElementById('createTitle').textContent = 'Edit GPT';
+            document.getElementById('createButton').textContent = 'Update GPT';
+            document.getElementById('createButton').setAttribute('onclick', 'updateGPT()');
+
+            // Show the create section
+            showSection('create');
+        }
+
+        // ADDED: Update GPT function
+        async function updateGPT() {
+            const name = document.getElementById('gptName').value;
+            const description = document.getElementById('gptDescription').value;
+            const instructions = document.getElementById('gptInstructions').value;
+            const enableWebSearch = document.getElementById('enableWebSearch').checked;
+
+            if (!name || !instructions) {
+                alert('Please fill in the name and instructions');
+                return;
+            }
+
+            const updatedGPT = {
+                id: editingGPTId,
+                name: name,
+                description: description,
+                instructions: instructions,
+                files: [...uploadedFiles],
+                webSearch: enableWebSearch,
+                created: new Date().toISOString() // You might want to preserve original created date
+            };
+
+            // Update in Supabase if logged in
+            if (supabase && currentUser) {
+                const { error } = await supabase
+                    .from('user_gpts')
+                    .update({ gpt_data: updatedGPT })
+                    .eq('id', editingGPTId)
+                    .eq('user_id', currentUser.id);
+
+                if (error) {
+                    alert('Error updating GPT: ' + error.message);
+                    return;
+                }
+            } else {
+                // Fallback to localStorage
+                const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
+                const index = gpts.findIndex(gpt => gpt.id === editingGPTId);
+                if (index !== -1) {
+                    gpts[index] = updatedGPT;
+                    localStorage.setItem('eringpt_gpts', JSON.stringify(gpts));
+                }
+            }
+
+            // Reset form and button
+            clearForm();
+            resetFormToCreateMode();
+
+            alert('GPT updated successfully!');
+            loadGPTs();
+            showSection('my-gpts');
+        }
+
+        // ADDED: Reset form to create mode
+        function resetFormToCreateMode() {
+            document.getElementById('createTitle').textContent = 'Create New GPT';
+            document.getElementById('createButton').textContent = 'Create GPT';
+            document.getElementById('createButton').setAttribute('onclick', 'createGPT()');
+            editingGPTId = null;
+        }
+
+        // ADDED: Delete GPT function
+        async function deleteGPT(gptId) {
+            event.stopPropagation(); // Prevent triggering selectGPT
+            
+            if (!confirm('Are you sure you want to delete this GPT? This action cannot be undone.')) {
+                return;
+            }
+
+            if (supabase && currentUser) {
+                const { error } = await supabase
+                    .from('user_gpts')
+                    .delete()
+                    .eq('id', gptId)
+                    .eq('user_id', currentUser.id);
+
+                if (error) {
+                    alert('Error deleting GPT: ' + error.message);
+                    return;
+                }
+            } else {
+                // Fallback to localStorage
+                const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
+                const filteredGPTs = gpts.filter(gpt => gpt.id !== gptId);
+                localStorage.setItem('eringpt_gpts', JSON.stringify(filteredGPTs));
+            }
+
+            alert('GPT deleted successfully!');
+            loadGPTs();
         }
 
         async function selectGPT(gptId) {
@@ -1065,11 +1251,16 @@
             }
         }
 
-        // FIXED: Navigation function (this was the problem!)
+        // FIXED: Navigation function
         function showSection(sectionId) {
             if (sectionId === 'my-gpts' && !currentUser) {
                 showAuthModal();
                 return;
+            }
+
+            // Reset form to create mode when leaving create section
+            if (sectionId !== 'create') {
+                resetFormToCreateMode();
             }
 
             document.querySelectorAll('.section').forEach(section => {
