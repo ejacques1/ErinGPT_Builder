@@ -336,6 +336,19 @@
             min-height: 100px;
         }
 
+        /* ADDED: Marketplace pricing styles */
+        .pricing-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .pricing-section.visible {
+            display: block;
+        }
+
         .file-upload {
             border: 2px dashed #2196F3 !important;
             border-radius: 10px;
@@ -391,11 +404,28 @@
             box-shadow: 0 10px 20px rgba(220, 53, 69, 0.3);
         }
 
+        /* ADDED: Marketplace purchase button */
+        .btn-purchase {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+        }
+
+        .btn-purchase:hover {
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+
         .gpt-actions {
             margin-top: 10px;
             display: flex;
             gap: 10px;
             justify-content: flex-start;
+        }
+
+        /* ADDED: Marketplace price display */
+        .gpt-price {
+            font-weight: 600;
+            color: #28a745;
+            font-size: 16px;
+            margin-top: 8px;
         }
 
         .chat-container {
@@ -693,6 +723,7 @@
                 <button class="nav-item active" onclick="showSection('setup')">🏠 Welcome</button>
                 <button class="nav-item" onclick="showSection('create')">➕ Create GPT</button>
                 <button class="nav-item" onclick="showSection('my-gpts')">📚 My GPTs</button>
+                <button class="nav-item" onclick="showSection('marketplace')">🛒 Marketplace</button>
                 <button class="nav-item" onclick="showSection('chat')">💬 Chat</button>
             </div>
 
@@ -710,6 +741,7 @@
                             <li>Document analysis during chat</li>
                             <li>Save unlimited GPTs (requires account)</li>
                             <li>No API key required - completely free!</li>
+                            <li><strong>NEW:</strong> Marketplace to sell your GPTs</li>
                         </ul>
                     </div>
 
@@ -763,6 +795,20 @@
                         </label>
                     </div>
 
+                    <!-- ADDED: Marketplace listing option -->
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="listForSale" onchange="togglePricing()"> List on Marketplace
+                        </label>
+                        <div id="pricingSection" class="pricing-section">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label for="monthlyPrice">Monthly Subscription Price ($)</label>
+                                <input type="number" id="monthlyPrice" placeholder="9.99" step="0.01" min="0">
+                            </div>
+                            <p style="font-size: 12px; color: #666; margin: 0;">Users will pay this amount monthly to access your GPT</p>
+                        </div>
+                    </div>
+
                     <button class="btn" id="createButton" onclick="createGPT()">Create GPT</button>
                 </div>
 
@@ -771,6 +817,15 @@
                     <h2>My GPTs</h2>
                     <div id="gptList" class="gpt-list">
                         <!-- GPTs will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- ADDED: Marketplace Section -->
+                <div id="marketplace" class="section">
+                    <h2>GPT Marketplace</h2>
+                    <p style="margin-bottom: 20px; color: #666;">Discover and subscribe to GPTs created by other users</p>
+                    <div id="marketplaceList" class="gpt-list">
+                        <!-- Marketplace GPTs will be loaded here -->
                     </div>
                 </div>
 
@@ -838,6 +893,13 @@
             loadGPTs();
             setupFileUpload();
         });
+
+        // ADDED: Toggle pricing section
+        function togglePricing() {
+            const pricingSection = document.getElementById('pricingSection');
+            const isChecked = document.getElementById('listForSale').checked;
+            pricingSection.className = `pricing-section ${isChecked ? 'visible' : ''}`;
+        }
 
         // ADDED: Auth functions
         function showAuthModal(defaultTab = 'login') {
@@ -1011,7 +1073,7 @@
             updateFileList();
         }
 
-        // MODIFIED: GPT Creation (added editing state reset)
+        // MODIFIED: GPT Creation with marketplace fields
         async function createGPT() {
             editingGPTId = null; // Reset editing state
             
@@ -1019,9 +1081,16 @@
             const description = document.getElementById('gptDescription').value;
             const instructions = document.getElementById('gptInstructions').value;
             const enableWebSearch = document.getElementById('enableWebSearch').checked;
+            const listForSale = document.getElementById('listForSale').checked;
+            const monthlyPrice = parseFloat(document.getElementById('monthlyPrice').value) || 0;
 
             if (!name || !instructions) {
                 alert('Please fill in the name and instructions');
+                return;
+            }
+
+            if (listForSale && monthlyPrice <= 0) {
+                alert('Please set a valid monthly price for marketplace listing');
                 return;
             }
 
@@ -1038,6 +1107,8 @@
                 instructions: instructions,
                 files: [...uploadedFiles],
                 webSearch: enableWebSearch,
+                forSale: listForSale,
+                monthlyPrice: monthlyPrice,
                 created: new Date().toISOString()
             };
 
@@ -1061,16 +1132,19 @@
             // Clear form (unchanged)
             clearForm();
 
-            alert('GPT created successfully!');
+            alert('GPT created successfully!' + (listForSale ? ' It will appear in the marketplace.' : ''));
             loadGPTs();
             showSection('my-gpts');
         }
 
-        // ADDED: Helper function to clear form
+        // MODIFIED: Helper function to clear form
         function clearForm() {
             document.getElementById('gptName').value = '';
             document.getElementById('gptDescription').value = '';
             document.getElementById('gptInstructions').value = '';
+            document.getElementById('listForSale').checked = false;
+            document.getElementById('monthlyPrice').value = '';
+            togglePricing(); // Hide pricing section
             uploadedFiles = [];
             updateFileList();
         }
@@ -1116,6 +1190,7 @@
                                 <p>${gpt.description}</p>
                                 <div style="font-size: 12px; color: #999; margin-top: 5px;">
                                     ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                                    ${gpt.forSale ? ` • Listed for $${gpt.monthlyPrice}/month` : ''}
                                 </div>
                             </div>
                             <div class="gpt-actions">
@@ -1125,33 +1200,81 @@
                         </div>
                     `;
                 }).join('');
-            } else {
-                // Fallback to localStorage
-                const gpts = JSON.parse(localStorage.getItem('eringpt_gpts') || '[]');
-                if (gpts.length === 0) {
-                    gptList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No GPTs created yet. Create your first one!</p>';
-                    return;
-                }
-
-                gptList.innerHTML = gpts.map(gpt => `
-                    <div class="gpt-item">
-                        <div class="gpt-content" onclick="selectGPT('${gpt.id}')">
-                            <h3>${gpt.name}</h3>
-                            <p>${gpt.description}</p>
-                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
-                                ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
-                            </div>
-                        </div>
-                        <div class="gpt-actions">
-                            <button class="btn btn-small" onclick="editGPT('${gpt.id}')">Edit</button>
-                            <button class="btn btn-small btn-delete" onclick="deleteGPT('${gpt.id}')">Delete</button>
-                        </div>
-                    </div>
-                `).join('');
             }
         }
 
-        // ADDED: Edit GPT function
+        // ADDED: Load marketplace GPTs
+        async function loadMarketplace() {
+            const marketplaceList = document.getElementById('marketplaceList');
+            
+            if (!supabase) {
+                marketplaceList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">Marketplace not available without database configuration.</p>';
+                return;
+            }
+
+            const { data: gpts, error } = await supabase
+                .from('user_gpts')
+                .select('*, profiles(email)')
+                .not('gpt_data->forSale', 'is', false)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading marketplace:', error);
+                marketplaceList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">Error loading marketplace.</p>';
+                return;
+            }
+
+            if (!gpts || gpts.length === 0) {
+                marketplaceList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No GPTs available in marketplace yet.</p>';
+                return;
+            }
+
+            // Filter only GPTs for sale
+            const forSaleGpts = gpts.filter(row => row.gpt_data.forSale);
+
+            if (forSaleGpts.length === 0) {
+                marketplaceList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No GPTs available for sale yet.</p>';
+                return;
+            }
+
+            marketplaceList.innerHTML = forSaleGpts.map(row => {
+                const gpt = row.gpt_data;
+                const isOwner = currentUser && row.user_id === currentUser.id;
+                
+                return `
+                    <div class="gpt-item">
+                        <div class="gpt-content">
+                            <h3>${gpt.name}</h3>
+                            <p>${gpt.description}</p>
+                            <div class="gpt-price">$${gpt.monthlyPrice}/month</div>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
+                                <br>Created by: ${row.profiles?.email || 'Anonymous'}
+                            </div>
+                        </div>
+                        <div class="gpt-actions">
+                            ${isOwner ? 
+                                '<span style="color: #666; font-size: 12px;">Your GPT</span>' : 
+                                `<button class="btn btn-small btn-purchase" onclick="subscribeTo('${row.id}')">Subscribe</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ADDED: Subscribe to GPT function (placeholder)
+        async function subscribeTo(gptId) {
+            if (!currentUser) {
+                showAuthModal();
+                return;
+            }
+            
+            alert('Subscription functionality coming soon! This will integrate with Stripe for payments.');
+            // TODO: Implement Stripe subscription flow
+        }
+
+        // MODIFIED: Edit GPT function to include marketplace fields
         async function editGPT(gptId) {
             event.stopPropagation(); // Prevent triggering selectGPT
             
@@ -1188,6 +1311,9 @@
             document.getElementById('gptDescription').value = gptToEdit.description;
             document.getElementById('gptInstructions').value = gptToEdit.instructions;
             document.getElementById('enableWebSearch').checked = gptToEdit.webSearch;
+            document.getElementById('listForSale').checked = gptToEdit.forSale || false;
+            document.getElementById('monthlyPrice').value = gptToEdit.monthlyPrice || '';
+            togglePricing(); // Show/hide pricing based on checkbox
             
             // Set uploaded files
             uploadedFiles = [...gptToEdit.files];
@@ -1202,15 +1328,22 @@
             showSection('create');
         }
 
-        // ADDED: Update GPT function
+        // MODIFIED: Update GPT function with marketplace fields
         async function updateGPT() {
             const name = document.getElementById('gptName').value;
             const description = document.getElementById('gptDescription').value;
             const instructions = document.getElementById('gptInstructions').value;
             const enableWebSearch = document.getElementById('enableWebSearch').checked;
+            const listForSale = document.getElementById('listForSale').checked;
+            const monthlyPrice = parseFloat(document.getElementById('monthlyPrice').value) || 0;
 
             if (!name || !instructions) {
                 alert('Please fill in the name and instructions');
+                return;
+            }
+
+            if (listForSale && monthlyPrice <= 0) {
+                alert('Please set a valid monthly price for marketplace listing');
                 return;
             }
 
@@ -1221,6 +1354,8 @@
                 instructions: instructions,
                 files: [...uploadedFiles],
                 webSearch: enableWebSearch,
+                forSale: listForSale,
+                monthlyPrice: monthlyPrice,
                 created: new Date().toISOString() // You might want to preserve original created date
             };
 
@@ -1322,9 +1457,9 @@
             }
         }
 
-        // FIXED: Navigation function
+        // MODIFIED: Navigation function to load marketplace
         function showSection(sectionId) {
-            if (sectionId === 'my-gpts' && !currentUser) {
+            if ((sectionId === 'my-gpts' || sectionId === 'marketplace') && !currentUser) {
                 showAuthModal();
                 return;
             }
@@ -1354,6 +1489,8 @@
 
             if (sectionId === 'my-gpts') {
                 loadGPTs();
+            } else if (sectionId === 'marketplace') {
+                loadMarketplace();
             }
         }
 
