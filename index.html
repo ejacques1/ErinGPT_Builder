@@ -1456,9 +1456,10 @@
             }
         }
 
-        // MODIFIED: Navigation function to load marketplace
+        // FIXED: Navigation function - removed marketplace auth requirement
         function showSection(sectionId) {
-            if ((sectionId === 'my-gpts' || sectionId === 'marketplace') && !currentUser) {
+            // Only require auth for "My GPTs", not for marketplace
+            if (sectionId === 'my-gpts' && !currentUser) {
                 showAuthModal();
                 return;
             }
