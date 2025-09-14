@@ -1203,7 +1203,7 @@
             }
         }
 
-        // ADDED: Load marketplace GPTs
+        // FIXED: Load marketplace GPTs - removed profiles query
         async function loadMarketplace() {
             const marketplaceList = document.getElementById('marketplaceList');
             
@@ -1214,8 +1214,7 @@
 
             const { data: gpts, error } = await supabase
                 .from('user_gpts')
-                .select('*, profiles(email)')
-                .not('gpt_data->forSale', 'is', false)
+                .select('*')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -1249,7 +1248,7 @@
                             <div class="gpt-price">$${gpt.monthlyPrice}/month</div>
                             <div style="font-size: 12px; color: #999; margin-top: 5px;">
                                 ${gpt.files.length} files • ${gpt.webSearch ? 'Web search enabled' : 'No web search'}
-                                <br>Created by: ${row.profiles?.email || 'Anonymous'}
+                                <br>Created by: Anonymous Creator
                             </div>
                         </div>
                         <div class="gpt-actions">
