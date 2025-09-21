@@ -1857,8 +1857,38 @@ showSection = function(sectionId) {
     return originalShowSection(sectionId);
 };
 
-function startCreatorSubscription() {
-    alert('Creator subscription functionality coming soon!');
+// Start creator subscription process
+async function startCreatorSubscription() {
+    if (!currentUser) {
+        showAuthModal();
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/stripe-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'create_creator_subscription',
+                userId: currentUser.id,
+                email: currentUser.email
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to create subscription');
+        }
+        
+        const { sessionId } = await response.json();
+        const { error } = await stripe.redirectToCheckout({ sessionId });
+        
+        if (error) {
+            alert('Error: ' + error.message);
+        }
+    } catch (error) {
+        console.error('Error starting creator subscription:', error);
+        alert('Error starting subscription process');
+    }
 }
     </script>
 </body>
