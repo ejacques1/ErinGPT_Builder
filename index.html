@@ -1917,6 +1917,29 @@ async function setupStripeConnect() {
         alert('Error setting up payment account');
     }
 }
+// Handle URL parameters for subscription success/failure
+window.addEventListener('load', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('creator_subscription') === 'success') {
+        alert('Creator subscription activated! You can now list GPTs on the marketplace.');
+        loadSubscriptionStatus();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('subscription') === 'success') {
+        const gptId = urlParams.get('gpt');
+        alert('Subscription successful! You now have access to this GPT.');
+        loadSubscriptionStatus();
+        if (gptId) selectGPT(gptId);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('connect') === 'success') {
+        alert('Payment setup complete! You can now receive payments from customers.');
+        loadSubscriptionStatus();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('creator_subscription') === 'cancelled') {
+        alert('Creator subscription cancelled.');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}); 
     </script>
 </body>
 </html>
