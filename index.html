@@ -865,6 +865,7 @@
             showUserInfo();
             closeAuthModal();
             loadGPTs();
+            loadSubscriptionStatus(); // ADDED: Phase 2
         } else if (event === 'SIGNED_OUT') {
             currentUser = null;
             hideUserInfo();
