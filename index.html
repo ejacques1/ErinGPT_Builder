@@ -649,6 +649,62 @@
             cursor: pointer;
             font-size: 12px;
         }
+
+        .dashboard-metric {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 10px;
+        }
+
+        .gpt-performance-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .performance-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .activity-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            border-left: 3px solid #4caf50;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-past-due {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-incomplete {
+            background: #fff3cd;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -723,6 +779,7 @@
                 <button class="nav-item active" onclick="showSection('setup')">🏠 Welcome</button>
                 <button class="nav-item" onclick="showSection('create')">➕ Create GPT</button>
                 <button class="nav-item" onclick="showSection('my-gpts')">📚 My GPTs</button>
+                <button class="nav-item" onclick="showSection('creator-dashboard')">📊 Creator Dashboard</button>
                 <button class="nav-item" onclick="showSection('marketplace')">🛒 Marketplace</button>
                 <button class="nav-item" onclick="showSection('chat')">💬 Chat</button>
             </div>
@@ -817,6 +874,58 @@
                     <h2>My GPTs</h2>
                     <div id="gptList" class="gpt-list">
                         <!-- GPTs will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Creator Dashboard Section -->
+                <div id="creator-dashboard" class="section">
+                    <h2>Creator Dashboard</h2>
+                    
+                    <!-- Subscription Status -->
+                    <div id="subscription-status" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3>Subscription Status</h3>
+                        <div id="creator-subscription-info">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Revenue Overview -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                        <div style="background: #e8f5e8; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; color: #2e7d32;">Active Subscribers</h4>
+                            <div id="total-subscribers" style="font-size: 2em; font-weight: bold; color: #1b5e20;">0</div>
+                        </div>
+                        
+                        <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; color: #1565c0;">Monthly Revenue</h4>
+                            <div id="monthly-revenue" style="font-size: 2em; font-weight: bold; color: #0d47a1;">$0</div>
+                        </div>
+                        
+                        <div style="background: #fff3e0; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; color: #ef6c00;">Next Payout</h4>
+                            <div id="next-payout" style="font-size: 2em; font-weight: bold; color: #e65100;">$0</div>
+                        </div>
+                        
+                        <div style="background: #fce4ec; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; color: #c2185b;">Total Earnings</h4>
+                            <div id="total-earnings" style="font-size: 2em; font-weight: bold; color: #ad1457;">$0</div>
+                        </div>
+                    </div>
+                    
+                    <!-- GPT Performance -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3>GPT Performance</h3>
+                        <div id="gpt-performance-list">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Activity -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                        <h3>Recent Activity</h3>
+                        <div id="recent-activity">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
                     </div>
                 </div>
 
@@ -1587,7 +1696,7 @@ let connectAccount = null;
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
             return messageId;
-            }
+        }
         
         // Phase 2: Load subscription status
         async function loadSubscriptionStatus() {
@@ -1611,6 +1720,159 @@ let connectAccount = null;
                 console.log('No active subscriptions found');
             }
         }
-    </script>
-</body>
-</html>
+
+        // Load creator dashboard data
+        async function loadCreatorDashboard() {
+            if (!currentUser) {
+                document.getElementById('creator-dashboard').innerHTML = `
+                    <div class="signin-prompt">
+                        <h3>Sign in to view your creator dashboard</h3>
+                        <button onclick="showAuthModal()">Sign In</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                await loadCreatorSubscriptionStatus();
+                await loadRevenueMetrics();
+                await loadGPTPerformance();
+                await loadRecentActivity();
+            } catch (error) {
+                console.error('Error loading creator dashboard:', error);
+            }
+        }
+
+        async function loadCreatorSubscriptionStatus() {
+            const statusDiv = document.getElementById('creator-subscription-info');
+            
+            if (!creatorSubscription) {
+                statusDiv.innerHTML = `
+                    <div style="text-align: center;">
+                        <p style="color: #856404; margin-bottom: 15px;">No active creator subscription</p>
+                        <button class="btn" onclick="startCreatorSubscription()">Subscribe for $19/month</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const status = creatorSubscription.status;
+            const nextBilling = new Date(creatorSubscription.current_period_end).toLocaleDateString();
+            
+            statusDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span class="status-badge ${status === 'active' ? 'status-active' : 'status-past-due'}">
+                            ${status.toUpperCase()}
+                        </span>
+                        <p style="margin: 10px 0 0 0; color: #666;">Next billing: ${nextBilling}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.2em; font-weight: bold;">$19.00/month</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadRevenueMetrics() {
+            if (!currentUser) return;
+            
+            // Get all customer subscriptions to user's GPTs
+            const { data: subscriptions, error } = await supabase
+                .from('customer_subscriptions')
+                .select('*, user_gpts(*)')
+                .eq('creator_id', currentUser.id)
+                .eq('status', 'active');
+            
+            if (error) {
+                console.error('Error loading revenue metrics:', error);
+                return;
+            }
+            
+            const totalSubscribers = subscriptions?.length || 0;
+            const monthlyRevenue = subscriptions?.reduce((sum, sub) => sum + (sub.monthly_price || 0), 0) || 0;
+            const nextPayout = Math.max(0, (monthlyRevenue * 0.7) - 19);
+            const totalEarnings = nextPayout * 6;
+            
+            document.getElementById('total-subscribers').textContent = totalSubscribers;
+            document.getElementById('monthly-revenue').textContent = `${monthlyRevenue.toFixed(2)}`;
+            document.getElementById('next-payout').textContent = `${nextPayout.toFixed(2)}`;
+            document.getElementById('total-earnings').textContent = `${totalEarnings.toFixed(2)}`;
+        }
+
+        async function loadGPTPerformance() {
+            if (!currentUser) return;
+            
+            const { data: gpts, error: gptsError } = await supabase
+                .from('user_gpts')
+                .select('*')
+                .eq('user_id', currentUser.id);
+            
+            if (gptsError) {
+                console.error('Error loading GPTs:', gptsError);
+                return;
+            }
+            
+            const performanceList = document.getElementById('gpt-performance-list');
+            
+            if (!gpts || gpts.length === 0) {
+                performanceList.innerHTML = '<p style="text-align: center; color: #666;">No GPTs created yet.</p>';
+                return;
+            }
+            
+            let performanceHTML = '';
+            
+            for (const gpt of gpts) {
+                const { data: subs } = await supabase
+                    .from('customer_subscriptions')
+                    .select('*')
+                    .eq('gpt_id', gpt.id)
+                    .eq('status', 'active');
+                
+                const subscriberCount = subs?.length || 0;
+                const revenue = subs?.reduce((sum, sub) => sum + (sub.monthly_price || 0), 0) || 0;
+                
+                performanceHTML += `
+                    <div class="gpt-performance-item">
+                        <div>
+                            <h4 style="margin: 0 0 5px 0;">${gpt.gpt_data.name}</h4>
+                            <div class="performance-stats">
+                                <span>${subscriberCount} subscribers</span>
+                                <span>${revenue.toFixed(2)}/month</span>
+                            </div>
+                        </div>
+                        <div>
+                            ${gpt.gpt_data.forSale ? 
+                                `<span class="status-badge status-active">LISTED</span>` : 
+                                `<span class="status-badge" style="background: #e9ecef; color: #6c757d;">PRIVATE</span>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }
+            
+            performanceList.innerHTML = performanceHTML;
+        }
+
+        async function loadRecentActivity() {
+            const activityDiv = document.getElementById('recent-activity');
+            activityDiv.innerHTML = '<p style="text-align: center; color: #666;">No recent activity.</p>';
+        }
+
+        // Update showSection to handle creator dashboard
+        const originalShowSection = showSection;
+        showSection = function(sectionId) {
+            if (sectionId === 'creator-dashboard') {
+                if (!currentUser) {
+                    showAuthModal();
+                    return;
+                }
+                loadCreatorDashboard();
+            }
+            
+            return originalShowSection(sectionId);
+        };
+
+        function startCreatorSubscription() {
+            alert('Creator subscription functionality coming soon!');
+        }
