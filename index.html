@@ -886,6 +886,10 @@
         let currentGPT = null;
         let uploadedFiles = [];
         let editingGPTId = null; // ADDED: Track editing state
+        // ADDED: Phase 2 subscription variables
+let creatorSubscription = null;
+let customerSubscriptions = [];
+let connectAccount = null;
         
         // MODIFIED: Initialize app
         document.addEventListener('DOMContentLoaded', function() {
