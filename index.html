@@ -1890,6 +1890,33 @@ async function startCreatorSubscription() {
         alert('Error starting subscription process');
     }
 }
+
+        // Setup Stripe Connect for creator payouts
+async function setupStripeConnect() {
+    if (!currentUser) return;
+    
+    try {
+        const response = await fetch('/api/stripe-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'create_connect_account',
+                userId: currentUser.id,
+                email: currentUser.email
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to create Connect account');
+        }
+        
+        const { onboardingUrl } = await response.json();
+        window.location.href = onboardingUrl;
+    } catch (error) {
+        console.error('Error setting up Stripe Connect:', error);
+        alert('Error setting up payment account');
+    }
+}
     </script>
 </body>
 </html>
