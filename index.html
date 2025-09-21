@@ -1586,6 +1586,29 @@ let connectAccount = null;
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
             return messageId;
+            }
+        
+        // Phase 2: Load subscription status
+        async function loadSubscriptionStatus() {
+            if (!currentUser) return;
+            
+            try {
+                // Load creator subscription status
+                const { data: creatorSub, error: creatorError } = await supabase
+                    .from('creator_subscriptions')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .eq('status', 'active')
+                    .single();
+                
+                if (!creatorError && creatorSub) {
+                    creatorSubscription = creatorSub;
+                }
+                
+                console.log('Subscription status loaded:', { creatorSubscription });
+            } catch (error) {
+                console.log('No active subscriptions found');
+            }
         }
     </script>
 </body>
