@@ -964,7 +964,10 @@
         let currentUser = null;
         
        if (SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Initialize Stripe
+const stripe = Stripe('pk_test_51HoGL6JyEjdwBHVZ62zlh2Bo1ZpOgad33NBBC0BcgMtPDPMxc6dGAdNV3ytyWQwNX0xjvoYrIDJd4laGPFOmc0oM009e9uXFcI'); // Replace with your actual key
     
     // ADD THIS: Handle OAuth callbacks and auth state changes
     supabase.auth.onAuthStateChange((event, session) => {
