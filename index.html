@@ -1718,6 +1718,143 @@ let connectAccount = null;
                 console.log('No active subscriptions found');
             }
         }
+   
+    // Load creator dashboard data
+async function loadCreatorDashboard() {
+    if (!currentUser) {
+        document.getElementById('creator-dashboard').innerHTML = `
+            <div class="signin-prompt">
+                <h3>Sign in to view your creator dashboard</h3>
+                <button onclick="showAuthModal()">Sign In</button>
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        await loadCreatorSubscriptionStatus();
+        await loadRevenueMetrics();
+        await loadGPTPerformance();
+        await loadRecentActivity();
+    } catch (error) {
+        console.error('Error loading creator dashboard:', error);
+    }
+}
+
+async function loadCreatorSubscriptionStatus() {
+    const statusDiv = document.getElementById('creator-subscription-info');
+    
+    if (!creatorSubscription) {
+        statusDiv.innerHTML = `
+            <div style="text-align: center;">
+                <p style="color: #856404; margin-bottom: 15px;">No active creator subscription</p>
+                <button class="btn" onclick="startCreatorSubscription()">Subscribe for $19/month</button>
+            </div>
+        `;
+        return;
+    }
+}
+
+async function loadRevenueMetrics() {
+    if (!currentUser) return;
+    
+    const { data: subscriptions, error } = await supabase
+        .from('customer_subscriptions')
+        .select('*, user_gpts(*)')
+        .eq('creator_id', currentUser.id)
+        .eq('status', 'active');
+    
+    if (error) {
+        console.error('Error loading revenue metrics:', error);
+        return;
+    }
+    
+    const totalSubscribers = subscriptions?.length || 0;
+    const monthlyRevenue = subscriptions?.reduce((sum, sub) => sum + (sub.monthly_price || 0), 0) || 0;
+    const nextPayout = Math.max(0, (monthlyRevenue * 0.7) - 19);
+    const totalEarnings = nextPayout * 6;
+    
+    document.getElementById('total-subscribers').textContent = totalSubscribers;
+    document.getElementById('monthly-revenue').textContent = `$${monthlyRevenue.toFixed(2)}`;
+    document.getElementById('next-payout').textContent = `$${nextPayout.toFixed(2)}`;
+    document.getElementById('total-earnings').textContent = `$${totalEarnings.toFixed(2)}`;
+}
+
+async function loadGPTPerformance() {
+    if (!currentUser) return;
+    
+    const { data: gpts, error: gptsError } = await supabase
+        .from('user_gpts')
+        .select('*')
+        .eq('user_id', currentUser.id);
+    
+    if (gptsError) {
+        console.error('Error loading GPTs:', gptsError);
+        return;
+    }
+    
+    const performanceList = document.getElementById('gpt-performance-list');
+    
+    if (!gpts || gpts.length === 0) {
+        performanceList.innerHTML = '<p style="text-align: center; color: #666;">No GPTs created yet.</p>';
+        return;
+    }
+    
+    let performanceHTML = '';
+    
+    for (const gpt of gpts) {
+        const { data: subs } = await supabase
+            .from('customer_subscriptions')
+            .select('*')
+            .eq('gpt_id', gpt.id)
+            .eq('status', 'active');
+        
+        const subscriberCount = subs?.length || 0;
+        const revenue = subs?.reduce((sum, sub) => sum + (sub.monthly_price || 0), 0) || 0;
+        
+        performanceHTML += `
+            <div class="gpt-performance-item">
+                <div>
+                    <h4 style="margin: 0 0 5px 0;">${gpt.gpt_data.name}</h4>
+                    <div class="performance-stats">
+                        <span>${subscriberCount} subscribers</span>
+                        <span>$${revenue.toFixed(2)}/month</span>
+                    </div>
+                </div>
+                <div>
+                    ${gpt.gpt_data.forSale ? 
+                        `<span class="status-badge status-active">LISTED</span>` : 
+                        `<span class="status-badge" style="background: #e9ecef; color: #6c757d;">PRIVATE</span>`
+                    }
+                </div>
+            </div>
+        `;
+    }
+    
+    performanceList.innerHTML = performanceHTML;
+}
+
+async function loadRecentActivity() {
+    const activityDiv = document.getElementById('recent-activity');
+    activityDiv.innerHTML = '<p style="text-align: center; color: #666;">No recent activity.</p>';
+}
+
+const originalShowSection = showSection;
+showSection = function(sectionId) {
+    if (sectionId === 'creator-dashboard') {
+        if (!currentUser) {
+            showAuthModal();
+            return;
+        }
+        loadCreatorDashboard();
+    }
+    
+    return originalShowSection(sectionId);
+};
+
+function startCreatorSubscription() {
+    alert('Creator subscription functionality coming soon!');
+}
     </script>
 </body>
 </html>
